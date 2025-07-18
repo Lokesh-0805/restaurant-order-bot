@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Restaurant Voice Order</title>
+    <style>
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            padding: 40px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        h2, h3 {
+            text-align: center;
+            color: #343a40;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            background: #f1f1f1;
+            margin-bottom: 20px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        pre {
+            background: #f0f0f0;
+            padding: 20px;
+            border-left: 5px solid #007bff;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        audio {
+            display: block;
+            margin: 20px auto;
+        }
+
+        hr {
+            margin: 30px 0;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Record Your Restaurant Order</h2>
+        <form id="recordForm" method="POST" enctype="multipart/form-data">
+            <button type="button" id="startBtn">Start Recording</button>
+            <button type="button" id="stopBtn" disabled>Stop Recording</button>
+            <p id="status">Status: Not recording</p>
+            <input type="hidden" name="recordedAudio" id="recordedAudio">
+            <button type="submit" id="submitBtn" disabled>Submit</button>
+        </form>
+
+
+        {% if order %}
+            <hr>
+            <h3>Formatted Order</h3>
+            <pre>{{ order }}</pre>
+
+            <h3>Audio Response</h3>
+            <audio id="responseAudio" controls>
+                <source src="{{ url_for('static', filename='output.mp3') }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+        {% endif %}
+    </div>
+
+
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const submitBtn = document.getElementById("submitBtn");
+        const statusText = document.getElementById("status");
+        const recordedAudioInput = document.getElementById("recordedAudio");
+
+        startBtn.onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                const reader = new FileReader();
+
+                reader.onloadend = () => {
+                    recordedAudioInput.value = reader.result;
+                    submitBtn.disabled = false;
+                };
+
+                reader.readAsDataURL(audioBlob);
+            };
+
+            mediaRecorder.start();
+            statusText.textContent = "Status: Recording...";
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+        };
+
+        stopBtn.onclick = () => {
+            mediaRecorder.stop();
+            statusText.textContent = "Status: Recording stopped";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        };
+    </script>
+    
+
+</body>
+</html>
